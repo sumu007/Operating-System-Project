@@ -1,0 +1,74 @@
+struct bridge { 
+int nwait; 
+int ncross; 
+int nconsec; 
+int swait; 
+int scross; 
+int sconsec; 
+struct lock *lock; 
+struct condition nboundover; 
+struct condition sboundover; 
+} 
+
+void bridge_init (struct bridge *b) 
+{ 
+b->nwait = 0; 
+b->ncross = 0; 
+b->nconsec = 0; 
+b->swait = 0; 
+b->scross = 0 
+b->sconsec = 0; 
+lock_init(&b->lock); 
+cond_init(&b-> nboundover); 
+cond_init(&b-> sboundover); 
+}
+
+int bridge_arrive_north (struct bridge *b) 
+{ 
+lock_acquire(&b->lock); 
+b->nwait++; 
+while ((b->scross> 0) || ((b->swait > 0) && (b->nconsec >= 5)) { 
+cond_wait (&b->sboundover, &b->lock); 
+} 
+
+b->nwait--; 
+b->ncross++; 
+b->nconsec++; 
+b->sconsec = 0; 
+lock_release(&b->lock); 
+}
+
+int bridge_leave_north (struct bridge *b) 
+{ 
+lock_acquire(&b->lock); 
+b->ncross--; 
+if (b->ncross == 0) { 
+cond_broadcast(&b->nboundover, &b->lock); 
+} 
+lock_release(&b->lock); 
+}
+
+int bridge_arrive_south (struct bridge *b) 
+{ 
+lock_acquire(&b->lock); 
+b->swait++; 
+while ((b->ncross > 0) || ((b->nwait > 0) && (b->sconsec >= 5)) { 
+cond_wait(&b->nboundover, &b->lock); 
+} 
+b->swait--; 
+b->scross++; 
+b->sconsec++; 
+b->nconsec = 0; 
+lock_release(&b->lock); 
+} 
+
+
+int bridge_leave_south (struct bridge *b) 
+{ 
+lock_acquire(&b->lock); 
+b->scross--; 
+if (b->scross == 0) { 
+cond_broadcast(&b->sboundover, &b->lock); 
+} 
+lock_release(&b->lock); 
+}
